@@ -6,13 +6,13 @@ flags = -lpigpio -Irt -pthread -IZXing -std=c++17
 
 # clean up object files
 clean: 
-rm -f .o*
+ rm -f .o*
 
 cleanex:
-rm -f $(target)
+ rm -f $(target)
 
 # this wont work unless you correctly setup git
 update: clean, cleanex
-git pull
-$(compiler) $(src) -o $(target) $(flags)
+ git pull
+ $(compiler) $(src) -o $(target) $(flags)
 
