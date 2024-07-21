@@ -216,7 +216,6 @@ void getBarcodes(std::atomic<bool>& stopIt, std::atomic<long int>& theBarCode)
 
         while(theBarCode != barcodeNull)        // let other thread do stuff until its ready to handle stuff
         {
-            // caveat: we stop handling inputs temporarily if the soda machine is on?
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
     }
