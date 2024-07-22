@@ -8,51 +8,56 @@
  * All rights reserved.
  */
 
-/*
- * Note: Refactoring this using the state pattern would probably make it
- * a hell of a lot cleaner.
- */
-
 /*************************************** 
  * Pin Out                             *
  * GPIO 12  LED1 (RED)                 *
  * GPIO 13  LED2 (GREEN)               *
  * GPIO 18  SWITCH IN                  *
  * GPIO 19  PRINT BUTTON IN            *
- * GPIO 17	 EARLY OFF BUTTON IN        *
+ * GPIO 17	EARLY OFF BUTTON IN        * 
  * GPIO 4   TO RELAY                   *
  * 5 V      TO RELAY                   *
  * 3.3 V    TO SWITCH/BUTTONS          *
  ***************************************/
+ 
+/***************************************
+ * Issues and notes:                   *
+ * 1. Implementation of fsm might be a *
+ *    bit overkill.                    *
+ * 2. gpio 17 is not currently         *
+ *    implemented on the hardware side *
+ **************************************/
 
-#include <iostream>     // mostly debug w/ cin/cout, and for getting the keyboard input from the barcode scanner
+#include <iostream>     // for getting the keyboard input from the barcode scanner using cin
 #include <time.h>       // get time as long from os
 #include <pigpio.h>     // rpi gpio controller library
 #include <thread>       // multithreading
 #include <atomic>       // atomic operations for the threads
-#include <string>       // stores the barcodes inside our thread
-#include <unistd.h>     // to sleep
+#include <string>       // for storing barcodes
+#include <unistd.h>     // to sleep()
 #include <fstream>      // for creating barcode file
 #include <stdlib.h>     // for sys calls
 
-// for barcode lib
+// barcode library
 #include <ZXing/BarcodeFormat.h>
 #include <ZXing/BitMatrix.h>
 #include <ZXing/CharacterSet.h>
 #include <ZXing/MultiFormatWriter.h>
 #include <ZXing/ImageView.h>
 
-// lightweight image writing lib
+// lightweight image writing library
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "sbt_image_write.h"
 
 using namespace ZXing;      // laziness
 
-// handle the barcode scanner in a separate thread
+// How this program works:
+// Thread 1 reads from a barcode scanner treated as a keyboard
+// Thread 2 is an event loop which acts on barcodes and handles gpio input
 
 const long int barcodeNull = -1;
 const int RED_LED = 12, GREEN_LED = 13, 
-          RELAY = 4, SWITCH = 18, BUTTON = 19, EARLY_OFF_BUTTON = 17;  // GPIO IDS
+          RELAY = 4, SWITCH = 18, BUTTON = 19, EARLY_OFF_BUTTON = 17;  // GPIO IDS, 
 
 void getBarcodes(std::atomic<bool>&, std::atomic<long int>&);
 void sodaOn();
