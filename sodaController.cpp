@@ -213,6 +213,7 @@ void getBarcodes(std::atomic<bool>& stopIt, std::atomic<long int>& theBarCode)
         std::getline(std::cin, input);
         try
         {
+        
             theBarCode = std::stol(input);
         }
         
@@ -252,3 +253,53 @@ void init()
         gpioWrite(13, 0);           // green
         gpioWrite(4, 0);            // relay
 }
+
+// new code for refactor goes here
+
+
+
+// interface for soda machine states
+class SodaState 
+{
+	virtual ~SodaState() {}
+	virtual void update(SodaMachine &soda
+	achine) {}
+	virtual void handleInput(SodaMachine &sodaMachine) {}
+};
+
+class OffState : public SodaState
+{
+	SodaState() : {}
+	virtual void update(SodaMachine &soda
+	achine) {}
+	virtual void handleInput(SodaMachine &sodaMachine)
+	
+};
+
+class OnState : public SodaState
+{
+	SodaState() : {}
+	virtual void update(SodaMachine &soda
+	achine) {}
+	virtual void handleInput(SodaMachine &sodaMachine)
+};
+
+class SodaMachine
+{
+public:
+	static OnState onState;
+	static OffState offState;
+
+	virtual void handleInput()
+	{
+		state->handleInput(*this);
+	}
+	
+	virtual void update()
+	{
+		state->update(*this);
+	}
+	
+private:
+	SodaState state;
+};
