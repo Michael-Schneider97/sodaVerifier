@@ -265,6 +265,10 @@ class SodaState
 	virtual void update(SodaMachine &soda
 	achine) {}
 	virtual void handleInput(SodaMachine &sodaMachine) {}
+	
+public:
+	static OnState onState;
+	static OffState offState;
 };
 
 class OffState : public SodaState
@@ -287,8 +291,7 @@ class OnState : public SodaState
 class SodaMachine
 {
 public:
-	static OnState onState;
-	static OffState offState;
+	virtual void SodaMachine() { state = &SodaState::offState; return; }
 
 	virtual void handleInput()
 	{
@@ -301,5 +304,5 @@ public:
 	}
 	
 private:
-	SodaState state;
+	SodaState *state;
 };
