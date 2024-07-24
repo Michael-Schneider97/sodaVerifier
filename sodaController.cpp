@@ -90,8 +90,7 @@ int main()
     {
         now = time(NULL);
 
-        // if we find that the print receipt button has been pressed, we shall print a barcode
-        
+                
         
         // if we find that the switch is turned on
         if(gpioRead(SWITCH) == PI_HIGH)
@@ -127,9 +126,7 @@ int main()
             sodaOnTime = sodaOnTimeSentinel;
         }
 
-        // we always handle codes scanned from other thread
-        // refreshing the timer
-        // this prevents snags
+        // this handles barcodes
         if(theBarcode != barcodeNull)
         {
             std::cout << "Barcode received in main\n";
@@ -191,7 +188,7 @@ void printBarcode()
     BitMatrix matrix = writer.encode(std::to_string(time(NULL)), size, size);
     auto bitmap =  ToMatrix<uint8_t>(matrix);
     stbi_write_png("barcode.png", bitmap.width(), bitmap.height(), 1, bitmap.data(), 0);
-    system("lp -d ITPP130 ./barcode.png");
+    system("lp -d ITPP130 ./barcode.png");    // not portable
 }
 
 void sodaOn()
@@ -221,20 +218,19 @@ void init()
         gpioWrite(IOPin::relay, 0);            
 }
 
-// enum of our
+// enum of our gpio pin ids
 enum IOPin {relay = 4, redLed = 12, greenLed = 13, mainSwitch = 18, printButton = 19};		
 
 // interface for soda machine states
 class SodaState 
 {
 	virtual ~SodaState() {}
-	virtual void update(SodaMachine &soda
+	virtual SodaState update(SodaMachine &soda
 	achine) {}
-	virtual void handleInput(SodaMachine &sodaMachine) {}
-	
-	void handleBaseInput()
+	void baseUpdate()
 	{
-		if(gpioRead(BUTTON) == PI_HIGH)
+		// this could cause a print loop bug in the future
+		if(gpioRead(IOPin::printButton) == PI_HIGH)
         {
             printBarcode();
         }
@@ -248,34 +244,32 @@ public:
 class OffState : public SodaState
 {
 	SodaState() : {}
-	virtual void update(SodaMachine &soda
-	achine) {}
-	virtual void handleInput(SodaMachine &sodaMachine)
-	
+	virtual SodaState update(SodaMachine &soda
+	achine) {}	
 };
 
 class OnState : public SodaState
 {
 	SodaState() : {}
-	virtual void update(SodaMachine &soda
+	virtual SodaState update(SodaMachine &soda
 	achine) {}
-	virtual void handleInput(SodaMachine &sodaMachine)
 };
 
 class SodaMachine
 {
 public:
-	virtual void SodaMachine() { state = &SodaState::offState; return; }
-
-	virtual void handleInput()
-	{
-		state->handleInput(*this);
+	virtual void SodaMachine() 
+	{ 
+		state = &SodaState::offState; return;
+		now = time(NULL)
+		sodaTimeLimit = 60;                // 60 seconds
+		totalValidBarcodeTime = 60 * 60;   // 1 hour
 	}
 	
 	virtual void update()
 	{
-	
-		state->update(*this);
+		now = time(NULL)
+		state = state->update(*this);
 	}￼
 	
 	// maybe add the button enum here
@@ -283,12 +277,10 @@ public:
 private:
 	SodaState *state;
 	
-	// time constants
-	const int sodaTimeLimit = 60;                   // 60 seconds
-    const int totalValidBarcodeTime = 60 *60;       // 90 minutes in seconds
-    long int now = time(NULL);                      // holds the now
-    const long int sodaOnTimeSentinel = -1;         // for off mode
+	const int sodaTimeLimit;                   
+    const int totalValidBarcodeTime;          
+    long int now;                     
+    const long int sodaOnTimeSentinel = -1;         // for off mode, may deprecate this
     long int sodaOnTime = sodaOnTimeSentinel;       // time stamp of when the soda got turned on
-    long int shutOffCountStart = 0;                 // for the quitting sequence
 };
 
