@@ -208,6 +208,7 @@ void sodaOff()
     gpioWrite(RELAY, PI_LOW);
 }
 
+// initializes gpio pins for this applications usage
 void init()
 {
         gpioSetMode(IOPin::redLed, PI_OUTPUT);
@@ -220,8 +221,8 @@ void init()
         gpioWrite(IOPin::relay, 0);            
 }
 
-// new code for refactor goes here
-enum class IOPin {relay = 4, redLed = 12, greenLed = 13, mainSwitch = 18, printButton = 19};		
+// enum of our
+enum IOPin {relay = 4, redLed = 12, greenLed = 13, mainSwitch = 18, printButton = 19};		
 
 // interface for soda machine states
 class SodaState 
