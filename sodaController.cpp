@@ -210,15 +210,14 @@ void sodaOff()
 
 void init()
 {
-        gpioSetMode(12, PI_OUTPUT);
-        gpioSetMode(13, PI_OUTPUT);
-        gpioSetMode(17, PI_INPUT);
-        gpioSetMode(18, PI_INPUT);
-        gpioSetMode(19, PI_INPUT);
-        gpioSetMode(4, PI_OUTPUT);
-        gpioWrite(12, 1);           // red
-        gpioWrite(13, 0);           // green
-        gpioWrite(4, 0);            // relay
+        gpioSetMode(IOPin::redLed, PI_OUTPUT);
+        gpioSetMode(IOPin::greenLed, PI_OUTPUT);
+        gpioSetMode(IOPin::mainSwitch, PI_INPUT);
+        gpioSetMode(IOPin::printButton, PI_INPUT);
+        gpioSetMode(IOPin::relay, PI_OUTPUT);
+        gpioWrite(IOPin::redLed, 1);           
+        gpioWrite(IOPin::greenLed, 0);           
+        gpioWrite(IOPin::relay, 0);            
 }
 
 // new code for refactor goes here
