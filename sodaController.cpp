@@ -56,8 +56,6 @@ using namespace ZXing;      // laziness
 // Thread 2 is an event loop which acts on barcodes and handles gpio input
 
 const long int barcodeNull = -1;
-const int RED_LED = 12, GREEN_LED = 13, 
-          RELAY = 4, SWITCH = 18, BUTTON = 19, EARLY_OFF_BUTTON = 17;  // GPIO IDS, 
 
 void getBarcodes(std::atomic<bool>&, std::atomic<long int>&);
 void sodaOn();
@@ -224,10 +222,7 @@ void init()
 }
 
 // new code for refactor goes here
-
-
-
-enum class Input {};		
+enum class IOPin {relay = 4, redLed = 12, greenLed = 13, mainSwitch = 18, printButton = 19};		
 
 // interface for soda machine states
 class SodaState 
