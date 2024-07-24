@@ -245,14 +245,30 @@ class OffState : public SodaState
 {
 	SodaState() : {}
 	virtual SodaState update(SodaMachine &soda
-	achine) {}	
+	achine) 
+	{
+		// if a valid barcode is received or
+		// switch is set to on
+		// return onState
+		// else return offState
+	}	
 };
 
 class OnState : public SodaState
 {
-	SodaState() : {}
+	SodaState() : shutOffFlag(false) {}
 	virtual SodaState update(SodaMachine &soda
-	achine) {}
+	achine) 
+	{
+		// anytime the switch is off, we set shutOffFlag to false (future feature)
+		
+		// if timer runs out and
+		// switch is off
+		// return offState
+		// else return onState
+	}
+	
+	bool shutOffFlag;
 };
 
 class SodaMachine
@@ -260,8 +276,8 @@ class SodaMachine
 public:
 	virtual void SodaMachine() 
 	{ 
-		state = &SodaState::offState; return;
-		now = time(NULL)
+		state = &SodaState::offState; 
+		now = time(NULL);
 		sodaTimeLimit = 60;                // 60 seconds
 		totalValidBarcodeTime = 60 * 60;   // 1 hour
 	}
@@ -270,9 +286,9 @@ public:
 	{
 		now = time(NULL)
 		state = state->update(*this);
+		
+		// TODO set the relay based on the state
 	}￼
-	
-	// maybe add the button enum here
 	
 private:
 	SodaState *state;
