@@ -78,15 +78,8 @@ int main()
         init();
     }
 
-    // variables
-    const int sodaTimeLimit = 60;                   // 60 seconds
-    const int totalValidBarcodeTime = 60 *60;       // 90 minutes in seconds
-    long int now = time(NULL);                      // holds the now
-    const long int sodaOnTimeSentinel = -1;         // for off mode
-    long int sodaOnTime = sodaOnTimeSentinel;       // time stamp of when the soda got turned on
-    long int shutOffCountStart = 0;                 // for the quitting sequence
-    long int receiptQueue = 0;                      // probably gonna be removed
-    const long int shutoffCountMax = 5;             // 5 seconds
+    // variables    
+    long int now = time(NULL);                      // holds the now, feed to rest soda machine obj
     std::atomic<bool> stopIt(false);                // stop flag
     std::atomic<long int> theBarcode(barcodeNull);  // allow threads to work with the barcode
     long int barcodeLocal = barcodeNull;            // for handoff from thread
@@ -94,47 +87,13 @@ int main()
     // the thread
     std::thread inputThread(getBarcodes, std::ref(stopIt), std::ref(theBarcode));
 	
-
-    // There is a case to be made for a state machine here, but maybe that's overkill for something this small
-
     // event loop
     while(true)
     {
         now = time(NULL);
 
-        // shutoff button
-        if(gpioRead(BUTTON) == PI_HIGH && gpioRead(SWITCH) == PI_HIGH)
-        {
-            if(shutOffCountStart == 0 || shutOffCountStart == sodaOnTimeSentinel)
-            {
-                shutOffCountStart = now;
-            }
-            else if((now - shutOffCountStart) >= shutoffCountMax)
-            {
-                gpioWrite(RED_LED, PI_LOW);
-                gpioWrite(GREEN_LED, PI_LOW);
-                gpioWrite(RELAY, PI_LOW);
-                gpioTerminate();
-                return 0;
-            }
-
-        }
-        else
-        {
-            shutOffCountStart = 0;
-        }
-
         // if we find that the print receipt button has been pressed, we shall print a barcode
-        if(gpioRead(BUTTON) == PI_HIGH)
-        {
-            // print a barcode
-                const int size = 206;       // 2 inches in pixels
-                MultiFormatWriter writer(ZXing::BarcodeFormat::Code128);
-                BitMatrix matrix = writer.encode(std::to_string(time(NULL)), size, size);
-                auto bitmap =  ToMatrix<uint8_t>(matrix);
-                stbi_write_png("barcode.png", bitmap.width(), bitmap.height(), 1, bitmap.data(), 0);
-                system("lp -d ITPP130 ./barcode.png");
-        }
+        
         
         // if we find that the switch is turned on
         if(gpioRead(SWITCH) == PI_HIGH)
@@ -227,6 +186,16 @@ void getBarcodes(std::atomic<bool>& stopIt, std::atomic<long int>& theBarCode)
     }
 }
 
+void printBarcode()
+{
+	const int size = 206;       // 2 inches in pixels
+    MultiFormatWriter writer(ZXing::BarcodeFormat::Code128);
+    BitMatrix matrix = writer.encode(std::to_string(time(NULL)), size, size);
+    auto bitmap =  ToMatrix<uint8_t>(matrix);
+    stbi_write_png("barcode.png", bitmap.width(), bitmap.height(), 1, bitmap.data(), 0);
+    system("lp -d ITPP130 ./barcode.png");
+}
+
 void sodaOn()
 {
     gpioWrite(RED_LED, PI_LOW);
@@ -258,6 +227,8 @@ void init()
 
 
 
+enum class Input {};		
+
 // interface for soda machine states
 class SodaState 
 {
@@ -265,6 +236,14 @@ class SodaState
 	virtual void update(SodaMachine &soda
 	achine) {}
 	virtual void handleInput(SodaMachine &sodaMachine) {}
+	
+	void handleBaseInput()
+	{
+		if(gpioRead(BUTTON) == PI_HIGH)
+        {
+            printBarcode();
+        }
+	}
 	
 public:
 	static OnState onState;
@@ -300,9 +279,21 @@ public:
 	
 	virtual void update()
 	{
+	
 		state->update(*this);
-	}
+	}￼
+	
+	// maybe add the button enum here
 	
 private:
 	SodaState *state;
+	
+	// time constants
+	const int sodaTimeLimit = 60;                   // 60 seconds
+    const int totalValidBarcodeTime = 60 *60;       // 90 minutes in seconds
+    long int now = time(NULL);                      // holds the now
+    const long int sodaOnTimeSentinel = -1;         // for off mode
+    long int sodaOnTime = sodaOnTimeSentinel;       // time stamp of when the soda got turned on
+    long int shutOffCountStart = 0;                 // for the quitting sequence
 };
+
