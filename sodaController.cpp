@@ -55,8 +55,6 @@ using namespace ZXing;      // laziness
 // Thread 1 reads from a barcode scanner treated as a keyboard
 // Thread 2 is an event loop which acts on barcodes and handles gpio input
 
-const long int barcodeNull = -1;
-
 void getBarcodes(std::atomic<bool>&, std::atomic<long int>&);
 void sodaOn();
 void sodaOff();
@@ -79,6 +77,7 @@ int main()
     // variables    
     long int now = time(NULL);                      // holds the now, feed to rest soda machine obj
     std::atomic<bool> stopIt(false);                // stop flag
+    const long int barcodeNull = -1;
     std::atomic<long int> theBarcode(barcodeNull);  // allow threads to work with the barcode
     long int barcodeLocal = barcodeNull;            // for handoff from thread
 
@@ -88,26 +87,9 @@ int main()
     // event loop
     while(true)
     {
-        // if we find that the switch is turned on
-        if(gpioRead(SWITCH) == PI_HIGH)
-        {
-            // turn on soda machine
-            sodaOn();
-        }
-
-        // add check which makes sure the soda machine wasn't already on from a customer
-        else if(sodaOnTime == sodaOnTimeSentinel)
-        {
-            sodaOff();
-        }
-        
-        
-        
-
         // this handles barcodes
         if(theBarcode != barcodeNull)
         {
-            std::cout << "Barcode received in main\n";
             if(barcodeLocal != barcodeNull && (now - theBarcode > totalValidBarcodeTime || now - theBarcode < 0))        // throw away trash if we have a gucci code
             {
                 theBarcode = barcodeNull;
@@ -119,13 +101,8 @@ int main()
             }
         }
    
-        // process received codes
-        if(barcodeLocal != barcodeNull && now - barcodeLocal <= totalValidBarcodeTime)
-        {
-            sodaOn();
-            sodaOnTime = now;
-            barcodeLocal = barcodeNull;
-        }
+        SodaMachine sodaMachine(&barcodeLocal); // possible ptr syntax error
+	    sodasMachine.update();     
 
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
@@ -145,7 +122,6 @@ void getBarcodes(std::atomic<bool>& stopIt, std::atomic<long int>& theBarCode)
         std::getline(std::cin, input);
         try
         {
-        
             theBarCode = std::stol(input);
         }
         
@@ -212,6 +188,14 @@ class SodaState
         {
             printBarcode();
         }
+        
+        if(sodaMachine::barcode != onState::nullTimeStamp && time(NULL) - sodaMachine::barcode <= sodaMachine::totalValidBarcodeTime)
+        {
+            sodaOn();
+            sodaOnTime = now;
+            barcodeLocal = barcodeNull;
+        }
+        
 	}
 	
 public:
@@ -225,11 +209,10 @@ class OffState : public SodaState
 	virtual SodaState update(SodaMachine &soda
 	achine) 
 	{
-		
 		// if a valid barcode is received or
 		// switch is set to on
-		// return onState
-		// else return offState with some timestamp
+		// return onState and set the time stamp 
+		// else return offState
 	}	
 };
 
@@ -260,12 +243,13 @@ class OnState : public SodaState
 class SodaMachine
 {
 public:
-	virtual void SodaMachine() 
+	virtual void SodaMachine(long int &barcode_)
 	{ 
 		state = &SodaState::offState; 
 		now = time(NULL);
 		sodaTimeLimit = 60;                // 60 seconds
 		totalValidBarcodeTime = 60 * 60;   // 1 hour
+		barcode = barcode_;    // this is supposed to assign the address of barcode_ to barcode but im fuzzy on the exact syntax
 	}
 	
 	virtual void update()
@@ -289,10 +273,11 @@ public:
 	
 private:
 	SodaState *state;
-
+	
 public:
 	const int sodaTimeLimit;                   
     const int totalValidBarcodeTime;          
-    long int now;                     
+    long int now;                     // usage of this can be replaced by time() calls
+	const long int barcode *scannedBarcode; 
 };
 
