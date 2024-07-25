@@ -205,6 +205,7 @@ class OffState : public SodaState
 		// checks for valid barcodes
         if(sodaMachine::barcode != onState::nullTimeStamp && time(NULL) - sodaMachine::barcode <= sodaMachine::totalValidBarcodeTime)
         {
+		    onState.timestamp = time(NULL); // does this work????
             return SodaState::onState;
         }
         else
