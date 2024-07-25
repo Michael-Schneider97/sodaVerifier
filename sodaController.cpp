@@ -250,7 +250,7 @@ class OffState : public SodaState
 		// if a valid barcode is received or
 		// switch is set to on
 		// return onState
-		// else return offState
+		// else return offState with some timestamp
 	}	
 };
 
@@ -262,13 +262,20 @@ class OnState : public SodaState
 	{
 		// anytime the switch is off, we set shutOffFlag to false (future feature)
 		
-		// if timer runs out and
-		// switch is off
-		// return offState
-		// else return onState
+		if(timestamp != nullTimeStamp && sodaMachine::now - timestamp <= sodaMachine::sodaTimeLimit && gpioRead(IOPin::mainSwitch) == PI_LOW)
+		{
+			timestamp = nullTimeStamp;
+			return SodaState::offState;
+		}
+		else
+		{
+			return sodaMachine->state;
+		}
 	}
 	
 	bool shutOffFlag;
+	long int timestamp;   
+	const int nullTimeStamp = -1;
 };
 
 class SodaMachine
@@ -292,7 +299,8 @@ public:
 	
 private:
 	SodaState *state;
-	
+
+public:
 	const int sodaTimeLimit;                   
     const int totalValidBarcodeTime;          
     long int now;                     
