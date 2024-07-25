@@ -75,7 +75,7 @@ int main()
     }
 
     // variables    
-    long int now = time(NULL);                      // holds the now, feed to rest soda machine obj
+    long int now = time(NULL);                      // is this used?
     std::atomic<bool> stopIt(false);                // stop flag
     const long int barcodeNull = -1;
     std::atomic<long int> theBarcode(barcodeNull);  // allow threads to work with the barcode
@@ -84,13 +84,13 @@ int main()
     // the thread
     std::thread inputThread(getBarcodes, std::ref(stopIt), std::ref(theBarcode));
 	
-    // event loop
+    // event loop (change variable to something better)
     while(true)
     {
-        // this handles barcodes
+        // this handles barcodes from our thread
         if(theBarcode != barcodeNull)
         {
-            if(barcodeLocal != barcodeNull && (now - theBarcode > totalValidBarcodeTime || now - theBarcode < 0))        // throw away trash if we have a gucci code
+            if(barcodeLocal != barcodeNull && (now - theBarcode > totalValidBarcodeTime || now - theBarcode < 0))        // throw away trash if we alreadt have a valid code
             {
                 theBarcode = barcodeNull;
             }
@@ -101,13 +101,13 @@ int main()
             }
         }
    
-        SodaMachine sodaMachine(&barcodeLocal); // possible ptr syntax error
-	    sodasMachine.update();     
+        SodaMachine sodaMachine(&barcodeLocal); // possible ptr syntax error here
+	    sodaMachine.update();     
 
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 
-    // frees memory/threads and so on
+    // frees the thread
     stopIt = true;
     gpioTerminate();
 }
@@ -169,7 +169,8 @@ void init()
         gpioSetMode(IOPin::relay, PI_OUTPUT);
         gpioWrite(IOPin::redLed, 1);           
         gpioWrite(IOPin::greenLed, 0);           
-        gpioWrite(IOPin::relay, 0);            
+        gpioWrite(IOPin::relay, 0);  
+        // can we change the 3 above lines to use PI_HIGH/LOW?         
 }
 
 // enum of our gpio pin ids
@@ -187,16 +188,8 @@ class SodaState
 		if(gpioRead(IOPin::printButton) == PI_HIGH)
         {
             printBarcode();
-        }
-        
-        if(sodaMachine::barcode != onState::nullTimeStamp && time(NULL) - sodaMachine::barcode <= sodaMachine::totalValidBarcodeTime)
-        {
-            sodaOn();
-            sodaOnTime = now;
-            barcodeLocal = barcodeNull;
-        }
-        
-	}
+        }   
+   	}
 	
 public:
 	static OnState onState;
@@ -209,10 +202,15 @@ class OffState : public SodaState
 	virtual SodaState update(SodaMachine &soda
 	achine) 
 	{
-		// if a valid barcode is received or
-		// switch is set to on
-		// return onState and set the time stamp 
-		// else return offState
+		// checks for valid barcodes
+        if(sodaMachine::barcode != onState::nullTimeStamp && time(NULL) - sodaMachine::barcode <= sodaMachine::totalValidBarcodeTime)
+        {
+            return SodaState::onState;
+        }
+        else
+        {
+	        return sodaMachine->state;
+        }
 	}	
 };
 
@@ -243,16 +241,16 @@ class OnState : public SodaState
 class SodaMachine
 {
 public:
-	virtual void SodaMachine(long int &barcode_)
+	void SodaMachine(long int &barcode_)
 	{ 
 		state = &SodaState::offState; 
-		now = time(NULL);
+		now = time(NULL);                 // might be worth removing this
 		sodaTimeLimit = 60;                // 60 seconds
 		totalValidBarcodeTime = 60 * 60;   // 1 hour
 		barcode = barcode_;    // this is supposed to assign the address of barcode_ to barcode but im fuzzy on the exact syntax
 	}
 	
-	virtual void update()
+	void update()
 	{
 		now = time(NULL)
 		state_ = state->update(*this);
