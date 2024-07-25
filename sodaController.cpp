@@ -88,10 +88,6 @@ int main()
     // event loop
     while(true)
     {
-        now = time(NULL);
-
-                
-        
         // if we find that the switch is turned on
         if(gpioRead(SWITCH) == PI_HIGH)
         {
@@ -105,26 +101,8 @@ int main()
             sodaOff();
         }
         
-        // if the machine is on and not reached the time limit
-        if(sodaOnTime != sodaOnTimeSentinel && now - sodaOnTime <= sodaTimeLimit)
-        {
-            // keep machine on
-            sodaOn();
-
-		 // unless we get an early off button signal
-		 if(gpioRead(EARLY_OFF_BUTTON) == PI_HIGH)
-		 {
-		 	sodaOff();
-		 }
-
-        }
-
-        // if it has reached the time limit
-        else if(sodaOnTime != sodaOnTimeSentinel && now - sodaOnTime > sodaTimeLimit)
-        {
-            sodaOff();
-            sodaOnTime = sodaOnTimeSentinel;
-        }
+        
+        
 
         // this handles barcodes
         if(theBarcode != barcodeNull)
@@ -247,6 +225,7 @@ class OffState : public SodaState
 	virtual SodaState update(SodaMachine &soda
 	achine) 
 	{
+		
 		// if a valid barcode is received or
 		// switch is set to on
 		// return onState
@@ -292,9 +271,20 @@ public:
 	virtual void update()
 	{
 		now = time(NULL)
-		state = state->update(*this);
+		state_ = state->update(*this);
 		
-		// TODO set the relay based on the state
+		if(state_ != state)
+		{
+			if(state_ == SodaState::onState)
+			{
+				sodaOn();
+			}
+			else if(state_ == SodaState::offState)
+			{
+				sodaOff();
+			}
+			state = state_;
+		}
 	}￼
 	
 private:
@@ -304,7 +294,5 @@ public:
 	const int sodaTimeLimit;                   
     const int totalValidBarcodeTime;          
     long int now;                     
-    const long int sodaOnTimeSentinel = -1;         // for off mode, may deprecate this
-    long int sodaOnTime = sodaOnTimeSentinel;       // time stamp of when the soda got turned on
 };
 
