@@ -87,10 +87,12 @@ int main()
     // event loop (change variable to something better)
     while(true)
     {
+	    SodaMachine sodaMachine(&barcodeLocal); // possible ptr syntax error here
+    
         // this handles barcodes from our thread
         if(theBarcode != barcodeNull)
         {
-            if(barcodeLocal != barcodeNull && (now - theBarcode > totalValidBarcodeTime || now - theBarcode < 0))        // throw away trash if we alreadt have a valid code
+            if(barcodeLocal != barcodeNull && (now - theBarcode > sodaMachine::totalValidBarcodeTime || now - theBarcode < 0))        // throw away trash if we alreadt have a valid code
             {
                 theBarcode = barcodeNull;
             }
@@ -101,7 +103,7 @@ int main()
             }
         }
    
-        SodaMachine sodaMachine(&barcodeLocal); // possible ptr syntax error here
+        
 	    sodaMachine.update();     
 
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
