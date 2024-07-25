@@ -13,6 +13,9 @@ clean:
 
 cleanex:
 	rm -f $(target)
+	
+build:
+	$(compiler) $(src) -o $(target) $(flags)
 
 # this wont work unless you correctly setup git
 update: clean cleanex
