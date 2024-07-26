@@ -66,6 +66,8 @@ void init();
 void printBarcode();
 class SodaState;
 class SodaMachibe;
+class OnState;
+class OffState;
 
 int main()
 {
@@ -186,8 +188,7 @@ void init()
 // interface for soda machine states
 class SodaState 
 {
-	virtual ~SodaState() {}
-	virtual SodaState update(SodaMachine &sodaMachine) {}
+	virtual SodaState update(SodaMachine &sodaMachine) {return sodaMachine->state;}
 	void baseUpdate()
 	{
 		// this could cause a print loop bug in the future
@@ -204,12 +205,10 @@ public:
 
 class OffState : public SodaState
 {
-	SodaState() : {}
-	virtual SodaState update(SodaMachine &soda
-	achine) 
+	virtual SodaState update(SodaMachine &sodaMachine) 
 	{
 		// checks for valid barcodes
-        if(sodaMachine::barcode != onState::nullTimeStamp && time(NULL) - sodaMachine::barcode <= sodaMachine::totalValidBarcodeTime)
+        if(sodaMachine.barcode != onState::nullTimeStamp && time(NULL) - sodaMachine.barcode <= sodaMachine.totalValidBarcodeTime)
         {
 		    onState.timestamp = time(NULL); // does this work????
             return SodaState::onState;
@@ -224,8 +223,7 @@ class OffState : public SodaState
 class OnState : public SodaState
 {
 	SodaState() : shutOffFlag(false) {}
-	virtual SodaState update(SodaMachine &soda
-	achine) 
+	virtual SodaState update(SodaMachine &sodaMachine) 
 	{
 		// anytime the switch is off, we set shutOffFlag to false (future feature)
 		
@@ -248,13 +246,10 @@ class OnState : public SodaState
 class SodaMachine
 {
 public:
-	void SodaMachine(long int &barcode_)
+	SodaMachine(long int &barcode_) : barcode(barcode_)
 	{ 
 		state = &SodaState::offState; 
 		now = time(NULL);                 // might be worth removing this
-		sodaTimeLimit = 60;                // 60 seconds
-		totalValidBarcodeTime = 60 * 60;   // 1 hour
-		barcode = barcode_;    // this is supposed to assign the address of barcode_ to barcode but im fuzzy on the exact syntax
 	}
 	
 	void update()
@@ -280,9 +275,9 @@ private:
 	SodaState *state;
 	
 public:
-	const int sodaTimeLimit;                   
-    const int totalValidBarcodeTime;          
+	const int sodaTimeLimit = 60;                   
+    const int totalValidBarcodeTime = 60 * 60;          
     long int now;                     // usage of this can be replaced by time() calls
-	const long int barcode *scannedBarcode; 
+	const long int *scannedBarcode; 
 };
 
