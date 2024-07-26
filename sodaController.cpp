@@ -135,10 +135,18 @@ int main()
         }
 
         // if the switch is off, but was previously on
-        else if(doTimerReset)
+        else
         {
-            sodaOff();
-            doTimerReset = false;
+		    if(sodaOnTime == sodaOnTimeSentinel)
+		    {
+	            sodaOff();
+            }
+            
+            if(doTimerReset)
+            {
+	            sodaOff();
+	            doTimerReset = false;
+            }
         }
         
         // if the machine is on and not reached the time limit
