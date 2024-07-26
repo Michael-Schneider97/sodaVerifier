@@ -49,7 +49,7 @@ using namespace ZXing;      // laziness
 
 // handle the barcode scanner in a separate thread
 
-enum GPIOId {relay = 4, redLed = 12, greenLed = 13, masterSwitch = 18, printButton = 19};
+enum GPIOPin {relay = 4, redLed = 12, greenLed = 13, masterSwitch = 18, printButton = 19};
 
 const long int barcodeNull = -1;
 
