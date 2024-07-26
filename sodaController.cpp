@@ -19,7 +19,6 @@
  * GPIO 13  LED2 (GREEN)               *
  * GPIO 18  SWITCH IN                  *
  * GPIO 19  PRINT BUTTON IN            *
- * GPIO 17	 EARLY OFF BUTTON IN        *
  * GPIO 4   TO RELAY                   *
  * 5 V      TO RELAY                   *
  * 3.3 V    TO SWITCH/BUTTONS          *
@@ -50,14 +49,15 @@ using namespace ZXing;      // laziness
 
 // handle the barcode scanner in a separate thread
 
+enum GPIOPin {relay = 4, redLed = 12, greenLed = 13, masterSwitch = 18, printButton = 19};
+
 const long int barcodeNull = -1;
-const int RED_LED = 12, GREEN_LED = 13, 
-          RELAY = 4, SWITCH = 18, BUTTON = 19, EARLY_OFF_BUTTON = 17;  // GPIO IDS
 
 void getBarcodes(std::atomic<bool>&, std::atomic<long int>&);
 void sodaOn();
 void sodaOff();
 void init();
+void printBarcode();
 
 int main()
 {
@@ -85,6 +85,7 @@ int main()
     std::atomic<bool> stopIt(false);                // stop flag
     std::atomic<long int> theBarcode(barcodeNull);  // allow threads to work with the barcode
     long int barcodeLocal = barcodeNull;            // for handoff from thread
+    bool doTimerReset = false;
 
     // the thread
     std::thread inputThread(getBarcodes, std::ref(stopIt), std::ref(theBarcode));
@@ -96,66 +97,62 @@ int main()
     while(true)
     {
         now = time(NULL);
-
-        // shutoff button
-        if(gpioRead(BUTTON) == PI_HIGH && gpioRead(SWITCH) == PI_HIGH)
+        
+        // if we find that the print receipt button has been pressed, we shall print a barcode
+        if(gpioRead(GPIOPin::printButton) == PI_HIGH)
         {
-            if(shutOffCountStart == 0 || shutOffCountStart == sodaOnTimeSentinel)
+            printBarcode();
+        }
+
+        // hard shutoff button
+        if(gpioRead(GPIOPin::printButton) == PI_HIGH && gpioRead(GPIOPin::masterSwitch) == PI_HIGH)
+        {
+            if(shutOffCountStart == sodaOnTimeSentinel)
             {
                 shutOffCountStart = now;
             }
             else if((now - shutOffCountStart) >= shutoffCountMax)
             {
-                gpioWrite(RED_LED, PI_LOW);
-                gpioWrite(GREEN_LED, PI_LOW);
-                gpioWrite(RELAY, PI_LOW);
+                sodaOff();
                 gpioTerminate();
-                return 0;
+                return 1;
             }
-
         }
         else
         {
-            shutOffCountStart = 0;
+            shutOffCountStart = sodaOnTimeSentinel;
         }
 
-        // if we find that the print receipt button has been pressed, we shall print a barcode
-        if(gpioRead(BUTTON) == PI_HIGH)
-        {
-            // print a barcode
-                const int size = 206;       // 2 inches in pixels
-                MultiFormatWriter writer(ZXing::BarcodeFormat::Code128);
-                BitMatrix matrix = writer.encode(std::to_string(time(NULL)), size, size);
-                auto bitmap =  ToMatrix<uint8_t>(matrix);
-                stbi_write_png("barcode.png", bitmap.width(), bitmap.height(), 1, bitmap.data(), 0);
-                system("lp -d ITPP130 ./barcode.png");
-        }
-        
         // if we find that the switch is turned on
-        if(gpioRead(SWITCH) == PI_HIGH)
+        if(gpioRead(GPIOPin::masterSwitch) == PI_HIGH)
         {
-            // turn on soda machine
+	        
+            if(sodaOnTime != sodaOnTimeSentinel)
+            {
+	            doTimerReset = true;
+			}
             sodaOn();
         }
 
-        // add check which makes sure the soda machine wasn't already on from a customer
-        else if(sodaOnTime == sodaOnTimeSentinel)
+        // if the switch is off, but was previously on
+        else
         {
-            sodaOff();
+		    if(sodaOnTime == sodaOnTimeSentinel)
+		    {
+	            sodaOff();
+            }
+            
+            if(doTimerReset)
+            {
+	            sodaOff();
+	            doTimerReset = false;
+            }
         }
         
         // if the machine is on and not reached the time limit
         if(sodaOnTime != sodaOnTimeSentinel && now - sodaOnTime <= sodaTimeLimit)
         {
-            // keep machine on
-            sodaOn();
-
-		 // unless we get an early off button signal
-		 if(gpioRead(EARLY_OFF_BUTTON) == PI_HIGH)
-		 {
-		 	sodaOff();
-		 }
-
+	        sodaOn; // this block might be unneeded. 
         }
 
         // if it has reached the time limit
@@ -196,6 +193,18 @@ int main()
     // frees memory/threads and so on
     stopIt = true;
     gpioTerminate();
+    return 0;
+}
+
+void printBarcode()
+{
+	const int size = 206;       // 2 inches in pixels
+    MultiFormatWriter writer(ZXing::BarcodeFormat::Code128);
+    BitMatrix matrix = writer.encode(std::to_string(time(NULL)), size, size);
+    auto bitmap =  ToMatrix<uint8_t>(matrix);
+    stbi_write_png("barcode.png", bitmap.width(), bitmap.height(), 1, bitmap.data(), 0);
+    system("lp -d ITPP130 ./barcode.png");
+    return;
 }
 
 // gets barcodes as keyboard input and then "returns" the barcode as a long int 
@@ -223,27 +232,26 @@ void getBarcodes(std::atomic<bool>& stopIt, std::atomic<long int>& theBarCode)
 
 void sodaOn()
 {
-    gpioWrite(RED_LED, PI_LOW);
-    gpioWrite(GREEN_LED, PI_HIGH);
-    gpioWrite(RELAY, PI_HIGH);
+    gpioWrite(GPIOPin::redLed, PI_LOW);
+    gpioWrite(GPIOPin::greenLed, PI_HIGH);
+    gpioWrite(GPIOPin::relay, PI_HIGH);
 }
 
 void sodaOff()
 {
-    gpioWrite(RED_LED, PI_HIGH);
-    gpioWrite(GREEN_LED, PI_LOW);
-    gpioWrite(RELAY, PI_LOW);
+    gpioWrite(GPIOPin::redLed, PI_HIGH);
+    gpioWrite(GPIOPin::greenLed, PI_LOW);
+    gpioWrite(GPIOPin::relay, PI_LOW);
 }
 
 void init()
 {
-        gpioSetMode(12, PI_OUTPUT);
-        gpioSetMode(13, PI_OUTPUT);
-        gpioSetMode(17, PI_INPUT);
-        gpioSetMode(18, PI_INPUT);
-        gpioSetMode(19, PI_INPUT);
-        gpioSetMode(4, PI_OUTPUT);
-        gpioWrite(12, 1);           // red
-        gpioWrite(13, 0);           // green
-        gpioWrite(4, 0);            // relay
+        gpioSetMode(GPIOPin::redLed, PI_OUTPUT);
+        gpioSetMode(GPIOPin::greenLed, PI_OUTPUT);
+        gpioSetMode(GPIOPin::masterSwitch, PI_INPUT);
+        gpioSetMode(GPIOPin::printButton, PI_INPUT);
+        gpioSetMode(GPIOPin::relay, PI_OUTPUT);
+        gpioWrite(GPIOPin::redLed, 1);           // red
+        gpioWrite(GPIOPin::greenLed, 0);           // green
+        gpioWrite(GPIOPin::relay, 0);            // relay
 }
