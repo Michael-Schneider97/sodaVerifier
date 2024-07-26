@@ -55,10 +55,17 @@ using namespace ZXing;      // laziness
 // Thread 1 reads from a barcode scanner treated as a keyboard
 // Thread 2 is an event loop which acts on barcodes and handles gpio input
 
+// enum of our gpio pin ids
+enum IOPin {relay = 4, redLed = 12, greenLed = 13, mainSwitch = 18, printButton = 19};		
+
+
 void getBarcodes(std::atomic<bool>&, std::atomic<long int>&);
 void sodaOn();
 void sodaOff();
 void init();
+void printBarcode();
+class SodaState;
+class SodaMachibe;
 
 int main()
 {
@@ -175,8 +182,6 @@ void init()
         // can we change the 3 above lines to use PI_HIGH/LOW?         
 }
 
-// enum of our gpio pin ids
-enum IOPin {relay = 4, redLed = 12, greenLed = 13, mainSwitch = 18, printButton = 19};		
 
 // interface for soda machine states
 class SodaState 
