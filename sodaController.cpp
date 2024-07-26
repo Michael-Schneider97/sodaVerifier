@@ -187,8 +187,7 @@ void init()
 class SodaState 
 {
 	virtual ~SodaState() {}
-	virtual SodaState update(SodaMachine &soda
-	achine) {}
+	virtual SodaState update(SodaMachine &sodaMachine) {}
 	void baseUpdate()
 	{
 		// this could cause a print loop bug in the future
