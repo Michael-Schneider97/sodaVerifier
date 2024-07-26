@@ -50,14 +50,15 @@ using namespace ZXing;      // laziness
 
 // handle the barcode scanner in a separate thread
 
+enum GPIOId {relay = 4, redLed = 12, greenLed = 13, masterSwitch = 18, printButton = 19};
+
 const long int barcodeNull = -1;
-const int RED_LED = 12, GREEN_LED = 13, 
-          RELAY = 4, SWITCH = 18, BUTTON = 19, EARLY_OFF_BUTTON = 17;  // GPIO IDS
 
 void getBarcodes(std::atomic<bool>&, std::atomic<long int>&);
 void sodaOn();
 void sodaOff();
 void init();
+void printBarcode();
 
 int main()
 {
@@ -98,38 +99,31 @@ int main()
         now = time(NULL);
 
         // shutoff button
-        if(gpioRead(BUTTON) == PI_HIGH && gpioRead(SWITCH) == PI_HIGH)
+        if(gpioRead(GPIOPin::printButton) == PI_HIGH && gpioRead(SWITCH) == PI_HIGH)
         {
-            if(shutOffCountStart == 0 || shutOffCountStart == sodaOnTimeSentinel)
+            if(shutOffCountStart == sodaOnTimeSentinel)
             {
                 shutOffCountStart = now;
             }
             else if((now - shutOffCountStart) >= shutoffCountMax)
             {
-                gpioWrite(RED_LED, PI_LOW);
-                gpioWrite(GREEN_LED, PI_LOW);
-                gpioWrite(RELAY, PI_LOW);
+                sodaOff();
                 gpioTerminate();
-                return 0;
+                return 1;
             }
 
         }
         else
         {
-            shutOffCountStart = 0;
+            shutOffCountStart = sodaOnTimeSentinel;
         }
 
         // if we find that the print receipt button has been pressed, we shall print a barcode
-        if(gpioRead(BUTTON) == PI_HIGH)
+        if(gpioRead(GPIOPin::printButton) == PI_HIGH)
         {
-            // print a barcode
-                const int size = 206;       // 2 inches in pixels
-                MultiFormatWriter writer(ZXing::BarcodeFormat::Code128);
-                BitMatrix matrix = writer.encode(std::to_string(time(NULL)), size, size);
-                auto bitmap =  ToMatrix<uint8_t>(matrix);
-                stbi_write_png("barcode.png", bitmap.width(), bitmap.height(), 1, bitmap.data(), 0);
-                system("lp -d ITPP130 ./barcode.png");
+            printBarcode();
         }
+        
         
         // if we find that the switch is turned on
         if(gpioRead(SWITCH) == PI_HIGH)
@@ -196,6 +190,18 @@ int main()
     // frees memory/threads and so on
     stopIt = true;
     gpioTerminate();
+    return 0;
+}
+
+void printBarcode()
+{
+	const int size = 206;       // 2 inches in pixels
+    MultiFormatWriter writer(ZXing::BarcodeFormat::Code128);
+    BitMatrix matrix = writer.encode(std::to_string(time(NULL)), size, size);
+    auto bitmap =  ToMatrix<uint8_t>(matrix);
+    stbi_write_png("barcode.png", bitmap.width(), bitmap.height(), 1, bitmap.data(), 0);
+    system("lp -d ITPP130 ./barcode.png");
+    return;
 }
 
 // gets barcodes as keyboard input and then "returns" the barcode as a long int 
