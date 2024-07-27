@@ -9,8 +9,10 @@
  */
 
 /*
- * Note: Refactoring this using the state pattern would probably make it
- * a hell of a lot cleaner.
+ * Note to recruiters: Don't judge me as an applicant
+ * solely on the design of this code. It's a mess of 
+ * conditional statements but works according to the
+ * requirements given to me by my client. 
  */
 
 /*************************************** 
